@@ -1,0 +1,10 @@
+[package]
+name = "imperium"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+smithay = "0.7"
+calloop = "0.14"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
