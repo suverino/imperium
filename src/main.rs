@@ -1,12 +1,11 @@
-use calloop::EventLoop;
-use smithay::reexports::wayland_server::{Display, DisplayHandle};
-use std::time::Duration;
+use smithay::reexports::wayland_server::Display;
+use winit::platform::pump_events::PumpStatus;
 use tracing::info;
 
-struct Imperium {
-    _display_handle: DisplayHandle,
-}
+mod backend;
+mod state;
 
+use state::Imperium;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
@@ -15,18 +14,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("imperium starting");
 
-    let mut event_loop: EventLoop<Imperium> = EventLoop::try_new()?;
     let mut display: Display<Imperium> = Display::new()?;
     let display_handle = display.handle();
 
-    let mut state = Imperium {
-        _display_handle: display_handle,
-    };
+    let mut state = Imperium::new(display_handle);
+
+    let (mut backend, mut winit) = backend::winit::init()?;
 
     info!("imperium entering event loop");
 
     loop {
-        event_loop.dispatch(Duration::from_millis(1000), &mut state)?;
+        if !state.running {
+            break;
+        }
+
+        let status = winit.dispatch_new_events(|event| {
+            backend::winit::handle_event(&mut backend, event, &mut state);
+        });
+
+        match status {
+            PumpStatus::Continue => {}
+            PumpStatus::Exit(_) => {
+                break;
+            }
+        }
+
         display.flush_clients()?;
     }
+
+    Ok(())
 }
